@@ -1,0 +1,36 @@
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: nginx-app
+  namespace: argocd
+spec:
+  generators:
+    - list:
+        elements:
+          - env: dev
+            namespace: nginx-app-dev
+  template:
+    metadata:
+      name: "nginx-app-{{env}}"
+      annotations:
+        argosync/env: "{{env}}"
+    spec:
+      project: default
+      source:
+        repoURL: https://github.com/l0s3rc0d3/argocd-sync
+        targetRevision: HEAD
+        path: charts/nginx-app
+        helm:
+          releaseName: "nginx-app-{{env}}"
+          parameters:
+            - name: image.tag
+              value: "latest"
+      destination:
+        server: https://kubernetes.default.svc
+        namespace: "{{namespace}}"
+      syncPolicy:
+        automated:
+          prune: true
+          selfHeal: true
+        syncOptions:
+          - CreateNamespace=true

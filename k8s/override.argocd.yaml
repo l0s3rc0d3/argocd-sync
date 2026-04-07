@@ -1,0 +1,19 @@
+global:
+  domain: localhost
+
+configs:
+  cm:
+    # the following is cause this is a dev environment
+    timeout.reconciliation: 30s
+    timeout.reconciliation.jitter: 0s
+
+dex:
+  enabled: false
+
+notifications:
+  enabled: false
+
+server:
+  service:
+    type: NodePort
+    nodePortHttps: 30443

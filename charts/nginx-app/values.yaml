@@ -1,0 +1,78 @@
+replicaCount: 1
+
+image:
+  repository: nginx
+  pullPolicy: IfNotPresent
+  tag: ""
+
+imagePullSecrets: []
+nameOverride: ""
+fullnameOverride: ""
+
+serviceAccount:
+  create: false
+  automount: false  
+  annotations: {}
+  name: ""
+
+podAnnotations: {}
+podLabels: {}
+
+
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 1001
+  runAsGroup: 1001
+  fsGroup: 1001
+  seccompProfile:
+    type: RuntimeDefault  
+securityContext:
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: true
+  runAsNonRoot: true
+  runAsUser: 1001
+  runAsGroup: 1001
+  capabilities:
+    drop:
+      - ALL 
+
+service:
+  type: ClusterIP
+  port: 80
+
+resources:
+  limits:
+    cpu: 200m
+    memory: 256Mi
+  requests:
+    cpu: 100m
+    memory: 128Mi
+
+livenessProbe:
+  httpGet:
+    path: /
+    port: http
+readinessProbe:
+  httpGet:
+    path: /
+    port: http
+
+volumes:
+  - name: cache
+    emptyDir: {}
+  - name: tmp
+    emptyDir: {}
+  - name: run
+    emptyDir: {}
+
+volumeMounts:
+  - name: cache
+    mountPath: /var/cache/nginx
+  - name: tmp
+    mountPath: /tmp
+  - name: run
+    mountPath: /run
+
+nodeSelector: {}
+tolerations: []
+affinity: {}
