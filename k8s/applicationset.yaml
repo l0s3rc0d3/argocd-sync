@@ -12,8 +12,6 @@ spec:
   template:
     metadata:
       name: "nginx-app-{{env}}"
-      annotations:
-        argosync/env: "{{env}}"
     spec:
       project: default
       source:
@@ -22,9 +20,8 @@ spec:
         path: charts/nginx-app
         helm:
           releaseName: "nginx-app-{{env}}"
-          parameters:
-            - name: image.tag
-              value: "latest"
+          valueFiles:
+            - overrides/override.{{env}}.yaml
       destination:
         server: https://kubernetes.default.svc
         namespace: "{{namespace}}"
