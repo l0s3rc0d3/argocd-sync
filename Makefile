@@ -31,7 +31,7 @@ argocd-appset:
 	@until kubectl get crd applicationsets.argoproj.io >/dev/null 2>&1; do \
 		sleep 3; \
 	done
-	kubectl apply -f ./k8s/applicationset.yaml
+	kubectl apply -f ./k8s/application.yaml
 
 argocd-token:
 	@echo "Waiting for argocd-server to be ready..."

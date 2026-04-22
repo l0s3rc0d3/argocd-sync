@@ -3,24 +3,27 @@ package config
 import (
 	"fmt"
 	"os"
+	"time"
 )
 
 type Config struct {
-	ArgocdURL      string
-	ArgocdToken    string
-	ArgocdAppName  string
-	ArgocdInsecure bool
+	ArgocdURL         string
+	ArgocdToken       string
+	ArgocdAppName     string
+	ArgocdInsecure    bool
+	ArgocdTimeout     time.Duration
+	ArgocdPollInterval time.Duration
 
 	LoggingLevel string
 
-	RepositoryURL                 string
-	RepositoryPAT                 string
-	RepositoryYAMLImageTagRoute   string
-	RepositoryYAMLFilePath        string
-	RepositoryNewImageTag         string
-	RepositoryCommitMsg           string
-	RepositoryCommitAuthorName    string
-	RepositoryCommitAuthorEmail   string
+	RepositoryURL               string
+	RepositoryPAT               string
+	RepositoryYAMLImageTagRoute string
+	RepositoryYAMLFilePath      string
+	RepositoryNewImageTag       string
+	RepositoryCommitMsg         string
+	RepositoryCommitAuthorName  string
+	RepositoryCommitAuthorEmail string
 }
 
 func Load() (*Config, error) {
@@ -43,6 +46,9 @@ func Load() (*Config, error) {
 	}
 
 	cfg.ArgocdInsecure = os.Getenv("ARGOCD_INSECURE") == "true"
+
+	cfg.ArgocdTimeout = parseDuration(os.Getenv("ARGOCD_TIMEOUT"), 5*time.Minute)
+	cfg.ArgocdPollInterval = parseDuration(os.Getenv("ARGOCD_POLL_INTERVAL"), 15*time.Second)
 
 	cfg.LoggingLevel = os.Getenv("LOGGING_LEVEL")
 	if cfg.LoggingLevel == "" {
@@ -97,4 +103,15 @@ func Load() (*Config, error) {
 	}
 
 	return cfg, nil
+}
+
+func parseDuration(value string, fallback time.Duration) time.Duration {
+	if value == "" {
+		return fallback
+	}
+	d, err := time.ParseDuration(value)
+	if err != nil {
+		return fallback
+	}
+	return d
 }

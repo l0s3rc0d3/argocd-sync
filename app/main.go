@@ -1,6 +1,8 @@
 package main
 
 import (
+	"context"
+	"errors"
 	"log/slog"
 	"os"
 	"path/filepath"
@@ -37,6 +39,8 @@ func main() {
 	logger.Info("configuration loaded",
 		"ARGOCD_URL", cfg.ArgocdURL,
 		"ARGOCD_APP_NAME", cfg.ArgocdAppName,
+		"ARGOCD_TIMEOUT", cfg.ArgocdTimeout.String(),
+		"ARGOCD_POLL_INTERVAL", cfg.ArgocdPollInterval.String(),
 		"REPOSITORY_URL", cfg.RepositoryURL,
 		"REPOSITORY_YAML_FILE_PATH", cfg.RepositoryYAMLFilePath,
 		"REPOSITORY_YAML_IMAGE_TAG_ROUTE", cfg.RepositoryYAMLImageTagRoute,
@@ -103,5 +107,53 @@ func main() {
 		os.Exit(1)
 	}
 
-	logger.Info("repository synced successfully")
+	logger.Info("repository updated successfully")
+
+	logger.Info("triggering hard refresh", "app", cfg.ArgocdAppName)
+	if err := argoClient.HardRefresh(cfg.ArgocdAppName); err != nil {
+		logger.Error("failed to hard refresh application", "error", err)
+		os.Exit(1)
+	}
+	logger.Info("hard refresh completed", "app", cfg.ArgocdAppName)
+
+	logger.Info("triggering sync", "app", cfg.ArgocdAppName)
+	if err := argoClient.SyncApplication(cfg.ArgocdAppName); err != nil {
+		if errors.Is(err, argocd.ErrSyncConflict) {
+			logger.Warn("a sync is already in progress, skipping sync trigger and proceeding to watch",
+				"app", cfg.ArgocdAppName)
+		} else {
+			logger.Error("failed to trigger sync", "error", err)
+			os.Exit(1)
+		}
+	} else {
+		logger.Info("sync triggered successfully", "app", cfg.ArgocdAppName)
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), cfg.ArgocdTimeout)
+	defer cancel()
+
+	logger.Info("watching application",
+		"app", cfg.ArgocdAppName,
+		"timeout", cfg.ArgocdTimeout.String(),
+		"pollInterval", cfg.ArgocdPollInterval.String(),
+	)
+
+	if err := argoClient.WatchUntilHealthy(
+		ctx,
+		logger,
+		cfg.ArgocdAppName,
+		cfg.RepositoryNewImageTag,
+		cfg.ArgocdPollInterval,
+	); err != nil {
+		logger.Error("application did not reach the expected state within the timeout",
+			"app", cfg.ArgocdAppName,
+			"error", err,
+		)
+		os.Exit(1)
+	}
+
+	logger.Info("deployment completed successfully",
+		"app", cfg.ArgocdAppName,
+		"imageTag", cfg.RepositoryNewImageTag,
+	)
 }
